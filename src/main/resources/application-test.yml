@@ -1,0 +1,43 @@
+spring:
+  application:
+    name: scholar-ai-assistant-test
+
+  # Test Database Configuration (overridden by Testcontainers)
+  datasource:
+    url: jdbc:tc:postgresql:16:///testdb
+    driver-class-name: org.testcontainers.jdbc.ContainerDatabaseDriver
+
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+    show-sql: true
+
+  ai:
+    openai:
+      api-key: test-api-key
+      chat:
+        options:
+          model: gpt-3.5-turbo
+          temperature: 0.0
+      embedding:
+        options:
+          model: text-embedding-3-small
+
+# Test Logging
+logging:
+  level:
+    root: INFO
+    io.github.doubletree.scholarai: DEBUG
+    org.testcontainers: INFO
+
+# Test-Specific Configuration
+scholar-ai:
+  storage:
+    upload-dir: ./target/test-uploads
+    max-file-size: 10MB
+  processing:
+    chunk-size: 500
+    chunk-overlap: 100
+  rag:
+    max-results: 3
+    similarity-threshold: 0.6

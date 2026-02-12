@@ -1,0 +1,48 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: pgvector/pgvector:pg16
+    container_name: scholar-ai-postgres
+    environment:
+      POSTGRES_DB: scholar_ai_db
+      POSTGRES_USER: scholar_user
+      POSTGRES_PASSWORD: scholar_password
+      # Enable pgvector extension on startup
+      POSTGRES_INITDB_ARGS: "-E UTF8"
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./docker/init-db.sql:/docker-entrypoint-initdb.d/init-db.sql
+    networks:
+      - scholar-ai-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U scholar_user -d scholar_ai_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Optional: PgAdmin for database management during development
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: scholar-ai-pgadmin
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@scholar-ai.local
+      PGADMIN_DEFAULT_PASSWORD: admin
+    ports:
+      - "5050:80"
+    networks:
+      - scholar-ai-network
+    depends_on:
+      - postgres
+    profiles:
+      - tools
+
+volumes:
+  postgres_data:
+    driver: local
+
+networks:
+  scholar-ai-network:
+    driver: bridge
