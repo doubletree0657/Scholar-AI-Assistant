@@ -29,7 +29,7 @@ services:
     image: maven:3.9-eclipse-temurin-21
     container_name: scholar-ai-backend
     # 让容器保持运行，充当一台“虚拟开发机”
-    command: mvn spring-boot:run
+    command: mvn spring-boot:run -Dspring-boot.run.jvmArguments="-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=*:5005"
     working_dir: /app
     ports:
       - "8080:8080"  # 暴露 Web 端口
@@ -45,8 +45,6 @@ services:
       - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/scholar_ai_db
       - SPRING_DATASOURCE_USERNAME=scholar_user
       - SPRING_DATASOURCE_PASSWORD=scholar_password
-      # 开启远程调试，方便你用 IDE 连接
-      - JAVA_TOOL_OPTIONS=-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=*:5005
       # 请记得在这里填入你的 API Key，或者在运行命令时传入
       - OPENAI_API_KEY=${OPENAI_API_KEY}
     depends_on:
