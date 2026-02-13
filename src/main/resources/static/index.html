@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Scholar AI - 智能学术助手</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+        body { font-family: 'Inter', sans-serif; background-color: #f8fafc; }
+        .glass-card { background: rgba(255, 255, 255, 0.8); backdrop-filter: blur(10px); }
+        .custom-scrollbar::-webkit-scrollbar { width: 4px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+    </style>
+</head>
+<body class="text-slate-800">
+<div id="app" class="flex h-screen overflow-hidden">
+
+    <!-- 左侧导航栏 -->
+    <aside class="w-64 border-r border-slate-200 bg-white flex flex-col">
+        <div class="p-6 flex items-center space-x-2">
+            <div class="bg-indigo-600 p-1.5 rounded-lg">
+                <i data-lucide="graduation-cap" class="text-white w-6 h-6"></i>
+            </div>
+            <h1 class="font-bold text-xl tracking-tight">Scholar AI</h1>
+        </div>
+
+        <nav class="flex-1 px-4 space-y-1">
+            <a href="#" class="flex items-center space-x-3 px-3 py-2 rounded-lg bg-indigo-50 text-indigo-700 font-medium">
+                <i data-lucide="library" class="w-5 h-5"></i>
+                <span>论文库</span>
+            </a>
+            <a href="#" class="flex items-center space-x-3 px-3 py-2 rounded-lg text-slate-600 hover:bg-slate-50 transition-colors">
+                <i data-lucide="history" class="w-5 h-5"></i>
+                <span>最近阅读</span>
+            </a>
+            <a href="#" class="flex items-center space-x-3 px-3 py-2 rounded-lg text-slate-600 hover:bg-slate-50 transition-colors">
+                <i data-lucide="settings" class="w-5 h-5"></i>
+                <span>设置</span>
+            </a>
+        </nav>
+
+        <div class="p-4 mt-auto border-t border-slate-100">
+            <div class="bg-slate-50 p-4 rounded-xl">
+                <p class="text-xs font-semibold text-slate-500 uppercase mb-2">存储使用情况</p>
+                <div class="w-full bg-slate-200 rounded-full h-1.5 mb-2">
+                    <div class="bg-indigo-500 h-1.5 rounded-full" style="width: 45%"></div>
+                </div>
+                <p class="text-xs text-slate-600">450MB / 1GB</p>
+            </div>
+        </div>
+    </aside>
+
+    <!-- 主内容区域 -->
+    <main class="flex-1 flex flex-col relative overflow-hidden">
+        <!-- 顶栏 -->
+        <header class="h-16 border-b border-slate-200 bg-white/80 backdrop-blur-md flex items-center justify-between px-8 z-10">
+            <div class="flex items-center space-x-4">
+                <div class="relative">
+                    <i data-lucide="search" class="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"></i>
+                    <input type="text" placeholder="搜索论文标题、作者..." class="pl-10 pr-4 py-2 bg-slate-100 border-none rounded-full text-sm w-80 focus:ring-2 focus:ring-indigo-500 transition-all outline-none">
+                </div>
+            </div>
+            <div class="flex items-center space-x-3">
+                <button @click="showUploadModal = true" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg text-sm font-medium flex items-center space-x-2 transition-all shadow-sm">
+                    <i data-lucide="plus" class="w-4 h-4"></i>
+                    <span>导入 PDF</span>
+                </button>
+            </div>
+        </header>
+
+        <!-- 列表内容 -->
+        <section class="flex-1 overflow-y-auto p-8 custom-scrollbar">
+            <div class="max-w-6xl mx-auto">
+                <div class="mb-8">
+                    <h2 class="text-2xl font-bold text-slate-900">论文列表</h2>
+                    <p class="text-slate-500">共 {{ papers.length }} 篇文献</p>
+                </div>
+
+                <!-- 空状态 -->
+                <div v-if="papers.length === 0" class="flex flex-col items-center justify-center py-20 bg-white rounded-2xl border-2 border-dashed border-slate-200">
+                    <div class="bg-slate-50 p-4 rounded-full mb-4">
+                        <i data-lucide="file-text" class="w-12 h-12 text-slate-300"></i>
+                    </div>
+                    <h3 class="text-lg font-medium text-slate-900">还没有论文？</h3>
+                    <p class="text-slate-500 mt-1">上传 PDF 开始你的智能阅读之旅</p>
+                </div>
+
+                <!-- 列表网格 -->
+                <div v-else class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    <div v-for="paper in papers" :key="paper.id"
+                         class="group bg-white p-5 rounded-2xl border border-slate-200 shadow-sm hover:shadow-md transition-all cursor-pointer"
+                         @click="selectPaper(paper)">
+                        <div class="flex justify-between items-start mb-4">
+                            <div class="bg-red-50 text-red-600 px-2 py-1 rounded text-[10px] font-bold uppercase tracking-wider">PDF</div>
+                            <button class="text-slate-300 hover:text-slate-600"><i data-lucide="more-vertical" class="w-5 h-5"></i></button>
+                        </div>
+                        <h4 class="font-bold text-slate-900 leading-tight group-hover:text-indigo-600 transition-colors">{{ paper.title }}</h4>
+                        <p class="text-sm text-slate-500 mt-2 line-clamp-1">{{ paper.author || '未知作者' }}</p>
+                        <div class="mt-6 pt-4 border-t border-slate-50 flex items-center justify-between">
+                            <span class="text-xs text-slate-400">{{ paper.createdAt || '刚刚' }}</span>
+                            <div class="flex space-x-1">
+                                <span v-for="tag in paper.tags" class="text-[10px] bg-slate-100 text-slate-600 px-2 py-0.5 rounded-full">{{ tag }}</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- 右侧分析侧边栏 -->
+    <aside v-if="selectedPaper" class="w-96 border-l border-slate-200 bg-white flex flex-col animate-in slide-in-from-right duration-300 shadow-2xl z-20">
+        <div class="p-6 border-b border-slate-100 flex items-center justify-between">
+            <h3 class="font-bold text-lg">论文分析</h3>
+            <button @click="selectedPaper = null" class="p-1 hover:bg-slate-100 rounded-lg text-slate-400"><i data-lucide="x" class="w-5 h-5"></i></button>
+        </div>
+
+        <div class="flex-1 overflow-y-auto p-6 custom-scrollbar">
+            <div class="mb-6">
+                <h4 class="text-sm font-semibold text-slate-400 uppercase tracking-widest mb-3">摘要</h4>
+                <p class="text-sm text-slate-700 leading-relaxed bg-slate-50 p-4 rounded-xl border border-slate-100">
+                    {{ selectedPaper.abstract || '正在生成摘要...' }}
+                </p>
+            </div>
+
+            <div class="mb-6">
+                <h4 class="text-sm font-semibold text-slate-400 uppercase tracking-widest mb-3">对话 AI</h4>
+                <div class="space-y-4">
+                    <div v-for="msg in chatHistory" :class="['flex', msg.role === 'user' ? 'justify-end' : 'justify-start']">
+                        <div :class="['max-w-[85%] p-3 rounded-2xl text-sm shadow-sm', msg.role === 'user' ? 'bg-indigo-600 text-white rounded-tr-none' : 'bg-slate-100 text-slate-800 rounded-tl-none']">
+                            {{ msg.content }}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="p-4 border-t border-slate-100">
+            <div class="relative">
+                <input v-model="userInput" @keyup.enter="sendMessage" type="text" placeholder="询问有关论文的内容..." class="w-full pl-4 pr-12 py-3 bg-slate-100 border-none rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 outline-none transition-all">
+                <button @click="sendMessage" class="absolute right-2 top-1/2 -translate-y-1/2 p-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700">
+                    <i data-lucide="send" class="w-4 h-4"></i>
+                </button>
+            </div>
+        </div>
+    </aside>
+
+    <!-- 上传模态框 -->
+    <div v-if="showUploadModal" class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden">
+            <div class="p-6 border-b border-slate-100 flex items-center justify-between">
+                <h3 class="font-bold text-xl">上传新论文</h3>
+                <button @click="showUploadModal = false" class="text-slate-400 hover:text-slate-600"><i data-lucide="x" class="w-6 h-6"></i></button>
+            </div>
+            <div class="p-8">
+                <div @dragover.prevent @drop.prevent="handleDrop"
+                     class="border-2 border-dashed border-slate-200 rounded-2xl py-12 flex flex-col items-center justify-center hover:border-indigo-400 hover:bg-indigo-50/30 transition-all cursor-pointer">
+                    <input type="file" ref="fileInput" class="hidden" accept=".pdf" @change="handleFileChange">
+                    <div class="bg-indigo-50 p-4 rounded-full mb-4">
+                        <i data-lucide="upload-cloud" class="w-8 h-8 text-indigo-500"></i>
+                    </div>
+                    <p class="font-medium text-slate-900">点击或拖拽 PDF 文件到此处</p>
+                    <p class="text-xs text-slate-400 mt-2">支持最大 20MB 的 PDF 文件</p>
+                    <button @click="$refs.fileInput.click()" class="mt-6 px-6 py-2 bg-white border border-slate-200 rounded-lg text-sm font-semibold hover:bg-slate-50 shadow-sm">选择文件</button>
+                </div>
+            </div>
+            <div v-if="uploading" class="px-8 pb-8">
+                <div class="flex items-center space-x-3 mb-2">
+                    <div class="animate-spin rounded-full h-4 w-4 border-2 border-indigo-500 border-t-transparent"></div>
+                    <span class="text-sm font-medium text-slate-600">正在分析并索引论文...</span>
+                </div>
+                <div class="w-full bg-slate-100 h-2 rounded-full overflow-hidden">
+                    <div class="bg-indigo-500 h-full animate-pulse" style="width: 70%"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<script>
+    const { createApp, ref, onMounted, nextTick } = Vue;
+
+    createApp({
+        setup() {
+            const papers = ref([]);
+            const selectedPaper = ref(null);
+            const showUploadModal = ref(false);
+            const uploading = ref(false);
+            const userInput = ref("");
+            const chatHistory = ref([]);
+
+            // 初始化：加载论文列表
+            const fetchPapers = async () => {
+                try {
+                    const response = await fetch('/api/papers');
+                    if (response.ok) {
+                        papers.value = await response.json();
+                    }
+                } catch (e) {
+                    console.error("加载失败", e);
+                    // 模拟数据供预览
+                    papers.value = [
+                        { id: 1, title: "Attention is All You Need", author: "Ashish Vaswani, et al.", abstract: "The dominant sequence transduction models are based on complex recurrent or convolutional neural networks...", tags: ["Transformer", "Deep Learning"], createdAt: "2024-05-20" },
+                        { id: 2, title: "Retrieval-Augmented Generation for Knowledge-Intensive NLP Tasks", author: "Patrick Lewis, et al.", abstract: "Large pre-trained language models have been shown to memorize a surprising amount of world knowledge...", tags: ["RAG", "NLP"], createdAt: "2024-05-21" }
+                    ];
+                }
+            };
+
+            const selectPaper = (paper) => {
+                selectedPaper.value = paper;
+                chatHistory.value = [
+                    { role: 'ai', content: `你好！我是针对《${paper.title}》的学术助手。你可以问我关于摘要、方法论或实验结论的任何问题。` }
+                ];
+                nextTick(() => lucide.createIcons());
+            };
+
+            const handleFileChange = async (event) => {
+                const file = event.target.files[0];
+                if (file) uploadFile(file);
+            };
+
+            const handleDrop = (event) => {
+                const file = event.dataTransfer.files[0];
+                if (file && file.type === 'application/pdf') uploadFile(file);
+            };
+
+            const uploadFile = async (file) => {
+                uploading.value = true;
+                const formData = new FormData();
+                formData.append('file', file);
+
+                try {
+                    const response = await fetch('/api/papers/upload', {
+                        method: 'POST',
+                        body: formData
+                    });
+                    if (response.ok) {
+                        await fetchPapers();
+                        showUploadModal.value = false;
+                    }
+                } catch (e) {
+                    console.error("上传错误", e);
+                } finally {
+                    uploading.value = false;
+                }
+            };
+
+            const sendMessage = async () => {
+                if (!userInput.value.trim()) return;
+
+                const content = userInput.value;
+                chatHistory.value.push({ role: 'user', content });
+                userInput.value = "";
+
+                // 模拟 API 调用分析
+                setTimeout(() => {
+                    chatHistory.value.push({
+                        role: 'ai',
+                        content: `根据对论文的分析，关于“${content}”，文中提到... (此处将对接后端 /api/papers/${selectedPaper.value.id}/analyze 接口)`
+                    });
+                }, 1000);
+            };
+
+            onMounted(() => {
+                fetchPapers();
+                lucide.createIcons();
+            });
+
+            return {
+                papers, selectedPaper, showUploadModal, uploading,
+                userInput, chatHistory,
+                selectPaper, handleFileChange, handleDrop, sendMessage
+            };
+        }
+    }).mount('#app');
+</script>
+</body>
+</html>
