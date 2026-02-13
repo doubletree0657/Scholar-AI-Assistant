@@ -95,14 +95,19 @@
                          @click="selectPaper(paper)">
                         <div class="flex justify-between items-start mb-4">
                             <div class="bg-red-50 text-red-600 px-2 py-1 rounded text-[10px] font-bold uppercase tracking-wider">PDF</div>
-                            <button class="text-slate-300 hover:text-slate-600"><i data-lucide="more-vertical" class="w-5 h-5"></i></button>
+                            <div class="flex space-x-2">
+                                <a :href="`/scholar-ai/api/papers/${paper.id}/download`" @click.stop class="text-slate-300 hover:text-indigo-600 transition-colors">
+                                    <i data-lucide="download" class="w-4 h-4"></i>
+                                </a>
+                                <button class="text-slate-300 hover:text-slate-600"><i data-lucide="more-vertical" class="w-5 h-5"></i></button>
+                            </div>
                         </div>
                         <h4 class="font-bold text-slate-900 leading-tight group-hover:text-indigo-600 transition-colors">{{ paper.title }}</h4>
-                        <p class="text-sm text-slate-500 mt-2 line-clamp-1">{{ paper.author || '未知作者' }}</p>
+                        <p class="text-sm text-slate-500 mt-2 line-clamp-1">{{ (paper.authors && paper.authors.length > 0) ? paper.authors.join(', ') : '未知作者' }}</p>
                         <div class="mt-6 pt-4 border-t border-slate-50 flex items-center justify-between">
-                            <span class="text-xs text-slate-400">{{ paper.createdAt || '刚刚' }}</span>
+                            <span class="text-xs text-slate-400">{{ formatDate(paper.uploaded_at) }}</span>
                             <div class="flex space-x-1">
-                                <span v-for="tag in paper.tags" class="text-[10px] bg-slate-100 text-slate-600 px-2 py-0.5 rounded-full">{{ tag }}</span>
+                                <span v-for="tag in (paper.tags || [])" class="text-[10px] bg-slate-100 text-slate-600 px-2 py-0.5 rounded-full">{{ tag }}</span>
                             </div>
                         </div>
                     </div>
@@ -122,7 +127,7 @@
             <div class="mb-6">
                 <h4 class="text-sm font-semibold text-slate-400 uppercase tracking-widest mb-3">摘要</h4>
                 <p class="text-sm text-slate-700 leading-relaxed bg-slate-50 p-4 rounded-xl border border-slate-100">
-                    {{ selectedPaper.abstract || '正在生成摘要...' }}
+                    {{ selectedPaper.abstract || '暂无摘要内容。' }}
                 </p>
             </div>
 
@@ -163,14 +168,14 @@
                         <i data-lucide="upload-cloud" class="w-8 h-8 text-indigo-500"></i>
                     </div>
                     <p class="font-medium text-slate-900">点击或拖拽 PDF 文件到此处</p>
-                    <p class="text-xs text-slate-400 mt-2">支持最大 20MB 的 PDF 文件</p>
+                    <p class="text-xs text-slate-400 mt-2">支持最大 50MB 的 PDF 文件</p>
                     <button @click="$refs.fileInput.click()" class="mt-6 px-6 py-2 bg-white border border-slate-200 rounded-lg text-sm font-semibold hover:bg-slate-50 shadow-sm">选择文件</button>
                 </div>
             </div>
             <div v-if="uploading" class="px-8 pb-8">
                 <div class="flex items-center space-x-3 mb-2">
                     <div class="animate-spin rounded-full h-4 w-4 border-2 border-indigo-500 border-t-transparent"></div>
-                    <span class="text-sm font-medium text-slate-600">正在分析并索引论文...</span>
+                    <span class="text-sm font-medium text-slate-600">正在保存并存储论文...</span>
                 </div>
                 <div class="w-full bg-slate-100 h-2 rounded-full overflow-hidden">
                     <div class="bg-indigo-500 h-full animate-pulse" style="width: 70%"></div>
@@ -186,6 +191,9 @@
 
     createApp({
         setup() {
+            // 注意：API 基础路径增加了 context-path 和 Controller 前缀
+            const API_BASE = "/scholar-ai/api/papers";
+            
             const papers = ref([]);
             const selectedPaper = ref(null);
             const showUploadModal = ref(false);
@@ -193,27 +201,22 @@
             const userInput = ref("");
             const chatHistory = ref([]);
 
-            // 初始化：加载论文列表
             const fetchPapers = async () => {
                 try {
-                    const response = await fetch('/api/papers');
+                    const response = await fetch(API_BASE);
                     if (response.ok) {
                         papers.value = await response.json();
+                        nextTick(() => lucide.createIcons());
                     }
                 } catch (e) {
                     console.error("加载失败", e);
-                    // 模拟数据供预览
-                    papers.value = [
-                        { id: 1, title: "Attention is All You Need", author: "Ashish Vaswani, et al.", abstract: "The dominant sequence transduction models are based on complex recurrent or convolutional neural networks...", tags: ["Transformer", "Deep Learning"], createdAt: "2024-05-20" },
-                        { id: 2, title: "Retrieval-Augmented Generation for Knowledge-Intensive NLP Tasks", author: "Patrick Lewis, et al.", abstract: "Large pre-trained language models have been shown to memorize a surprising amount of world knowledge...", tags: ["RAG", "NLP"], createdAt: "2024-05-21" }
-                    ];
                 }
             };
 
             const selectPaper = (paper) => {
                 selectedPaper.value = paper;
                 chatHistory.value = [
-                    { role: 'ai', content: `你好！我是针对《${paper.title}》的学术助手。你可以问我关于摘要、方法论或实验结论的任何问题。` }
+                    { role: 'ai', content: `你好！我是针对《${paper.title}》的学术助手。目前文件已成功上传，你可以尝试下载它。后续我们将开启 AI 深度分析功能。` }
                 ];
                 nextTick(() => lucide.createIcons());
             };
@@ -234,16 +237,18 @@
                 formData.append('file', file);
 
                 try {
-                    const response = await fetch('/api/papers/upload', {
+                    const response = await fetch(`${API_BASE}/upload`, {
                         method: 'POST',
                         body: formData
                     });
                     if (response.ok) {
                         await fetchPapers();
                         showUploadModal.value = false;
+                    } else {
+                        console.error("上传失败，状态码:", response.status);
                     }
                 } catch (e) {
-                    console.error("上传错误", e);
+                    console.error("上传网络错误", e);
                 } finally {
                     uploading.value = false;
                 }
@@ -256,14 +261,23 @@
                 chatHistory.value.push({ role: 'user', content });
                 userInput.value = "";
 
-                // 模拟 API 调用分析
                 setTimeout(() => {
                     chatHistory.value.push({
                         role: 'ai',
-                        content: `根据对论文的分析，关于“${content}”，文中提到... (此处将对接后端 /api/papers/${selectedPaper.value.id}/analyze 接口)`
+                        content: `收到你的问题：“${content}”。目前 RAG 深度分析功能正在开发中，敬请期待！`
                     });
-                }, 1000);
+                }, 800);
             };
+            
+            const formatDate = (dateStr) => {
+                if (!dateStr) return '刚刚';
+                try {
+                    const date = new Date(dateStr);
+                    return date.toLocaleString();
+                } catch (e) {
+                    return dateStr;
+                }
+            }
 
             onMounted(() => {
                 fetchPapers();
@@ -273,7 +287,7 @@
             return {
                 papers, selectedPaper, showUploadModal, uploading,
                 userInput, chatHistory,
-                selectPaper, handleFileChange, handleDrop, sendMessage
+                selectPaper, handleFileChange, handleDrop, sendMessage, formatDate
             };
         }
     }).mount('#app');
